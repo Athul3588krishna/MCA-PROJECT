@@ -1,0 +1,15 @@
+{
+  "name": "varas-2-deployable",
+  "version": "1.0.0",
+  "private": true,
+  "description": "VARAS 2.0 auto ride booking MVP",
+  "scripts": {
+    "install:all": "npm --prefix frontend install",
+    "build": "npm --prefix frontend run build",
+    "start": "npm --prefix backend start",
+    "check": "npm --prefix backend run check && npm --prefix frontend run build"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
