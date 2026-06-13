@@ -7,40 +7,15 @@ import './App.css'
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 const roles = ['Passenger', 'Driver', 'Admin']
 
-const fallbackDrivers = [
-  { id: 'D-108', name: 'Arun Das', mobile: '+919876543210', auto: 'KL 07 CB 4231', area: 'Kakkanad', rating: 4.8, status: 'Online', verified: true, earnings: 2480 },
-  { id: 'D-214', name: 'Nisha Varghese', mobile: '+919876543211', auto: 'KL 43 M 8891', area: 'Edappally', rating: 4.7, status: 'Online', verified: true, earnings: 3120 },
-  { id: 'D-332', name: 'Rafiq P', mobile: '+919876543212', auto: 'KL 01 AQ 7732', area: 'Vyttila', rating: 4.5, status: 'Offline', verified: false, earnings: 1780 },
-]
-
-const fallbackRides = [
-  { id: 'VR-2048', passenger: 'Meera Nair', pickup: 'Infopark Gate', destination: 'Vyttila Hub', driver: fallbackDrivers[0], fare: 186, distance: 8.9, status: 'On trip', rating: 5, createdAt: new Date().toISOString() },
-  { id: 'VR-2047', passenger: 'Joel Mathew', pickup: 'CUSAT Metro', destination: 'Lulu Mall', driver: fallbackDrivers[1], fare: 128, distance: 5.4, status: 'Completed', rating: 4, createdAt: new Date().toISOString() },
-]
-
-const fallbackComplaints = [
-  { id: 'C-91', title: 'Late pickup', owner: 'Passenger', priority: 'Medium', status: 'Open' },
-  { id: 'C-86', title: 'Payment mismatch', owner: 'Driver', priority: 'High', status: 'Review' },
-]
-
-const fallbackEvents = [
-  { id: 'EV-1', type: 'ride:requested', createdAt: new Date().toISOString(), payload: fallbackRides[0] },
-  { id: 'EV-2', type: 'driver:updated', createdAt: new Date().toISOString(), payload: fallbackDrivers[1] },
-]
-
-const fallbackAnalytics = {
-  ridesToday: 2,
-  monthlyRevenue: 314,
-  averageRating: 4.5,
-  onlineDrivers: 2,
-  pendingVerifications: 1,
-  peakBookingTime: '08:00 AM - 10:00 AM',
-  areaWiseRideStatistics: { 'Infopark Gate': 1, 'CUSAT Metro': 1 },
-  demandPrediction: [
-    { area: 'Infopark', demand: 92, recommendation: 'Move 3 drivers nearby' },
-    { area: 'Vyttila', demand: 81, recommendation: 'Keep surge at 1.2x' },
-    { area: 'Edappally', demand: 76, recommendation: 'Notify idle drivers' },
-  ],
+const emptyAnalytics = {
+  ridesToday: 0,
+  monthlyRevenue: 0,
+  averageRating: 0,
+  onlineDrivers: 0,
+  pendingVerifications: 0,
+  peakBookingTime: 'No ride data yet',
+  areaWiseRideStatistics: {},
+  demandPrediction: [],
 }
 
 const pageConfig = {
@@ -55,19 +30,19 @@ function App() {
   const [activePage, setActivePage] = useState('Dashboard')
   const [token, setToken] = useState(() => localStorage.getItem('varasToken') || '')
   const [user, setUser] = useState(() => readStoredUser())
-  const [rides, setRides] = useState(fallbackRides)
-  const [drivers, setDrivers] = useState(fallbackDrivers)
-  const [complaints, setComplaints] = useState(fallbackComplaints)
-  const [events, setEvents] = useState(fallbackEvents)
-  const [analytics, setAnalytics] = useState(fallbackAnalytics)
-  const [activeRide, setActiveRide] = useState(fallbackRides[0])
-  const [notice, setNotice] = useState('Login to connect to the live API.')
+  const [rides, setRides] = useState([])
+  const [drivers, setDrivers] = useState([])
+  const [complaints, setComplaints] = useState([])
+  const [events, setEvents] = useState([])
+  const [analytics, setAnalytics] = useState(emptyAnalytics)
+  const [activeRide, setActiveRide] = useState(null)
+  const [notice, setNotice] = useState('Login to connect to the API.')
   const [loading, setLoading] = useState(false)
   const [booking, setBooking] = useState({
-    pickup: 'Infopark Gate',
-    destination: 'Vyttila Hub',
-    distance: 8.9,
-    peak: true,
+    pickup: '',
+    destination: '',
+    distance: 1,
+    peak: false,
   })
 
   const fare = estimateFare(booking.distance, booking.peak)
@@ -79,11 +54,11 @@ function App() {
     const avgRating = completed.reduce((sum, ride) => sum + Number(ride.rating || 0), 0) / completed.length || 0
 
     return {
-      rides: analytics.ridesToday || rides.length,
-      revenue: analytics.monthlyRevenue || revenue,
+      rides: analytics.ridesToday ?? rides.length,
+      revenue: analytics.monthlyRevenue ?? revenue,
       avgRating: Number(analytics.averageRating || avgRating).toFixed(1),
-      onlineDrivers: analytics.onlineDrivers || drivers.filter((driver) => driver.status === 'Online').length,
-      pendingVerifications: analytics.pendingVerifications || drivers.filter((driver) => !driver.verified).length,
+      onlineDrivers: analytics.onlineDrivers ?? drivers.filter((driver) => driver.status === 'Online').length,
+      pendingVerifications: analytics.pendingVerifications ?? drivers.filter((driver) => !driver.verified).length,
       openComplaints: complaints.filter((item) => item.status !== 'Closed').length,
     }
   }, [analytics, complaints, drivers, rides])
@@ -181,6 +156,11 @@ function App() {
   }
 
   async function bookRide() {
+    if (!booking.pickup || !booking.destination) {
+      setNotice('Pickup and destination are required.')
+      return
+    }
+
     try {
       const ride = await api('/api/rides', {
         method: 'POST',
@@ -250,10 +230,18 @@ function App() {
     }
   }
 
-  function createSupportComplaint(template) {
-    const complaint = { id: `C-${Date.now().toString().slice(-4)}`, ...template }
-    setComplaints((current) => [complaint, ...current])
-    setNotice(`${complaint.title} complaint added to the support queue.`)
+  async function createSupportComplaint(template) {
+    try {
+      const complaint = await api('/api/support/complaints', {
+        method: 'POST',
+        body: JSON.stringify(template),
+      })
+      setComplaints((current) => [complaint, ...current])
+      setNotice(`${complaint.title} complaint added to the support queue.`)
+      await refreshData()
+    } catch (error) {
+      setNotice(error.message)
+    }
   }
 
   if (screen === 'home') {

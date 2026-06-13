@@ -13,9 +13,9 @@ function loadDb() {
       ...clone(seedDb),
       ...parsed,
       users: Array.isArray(parsed.users) ? parsed.users : [],
-      drivers: Array.isArray(parsed.drivers) ? parsed.drivers : seedDb.drivers,
-      rides: Array.isArray(parsed.rides) ? parsed.rides : seedDb.rides,
-      complaints: Array.isArray(parsed.complaints) ? parsed.complaints : seedDb.complaints,
+      drivers: Array.isArray(parsed.drivers) ? parsed.drivers : [],
+      rides: Array.isArray(parsed.rides) ? parsed.rides : [],
+      complaints: Array.isArray(parsed.complaints) ? parsed.complaints : [],
       events: Array.isArray(parsed.events) ? parsed.events : [],
     }
   } catch (error) {

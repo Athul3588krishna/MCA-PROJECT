@@ -4,10 +4,14 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "check": "node --check index.js && node --check config/env.js && node --check config/loadEnv.js && node --check connect/database.js && node --check connect/seed.js && node --check controllers/authController.js && node --check controllers/rideController.js && node --check controllers/driverController.js && node --check controllers/adminController.js && node --check controllers/eventController.js && node --check controllers/sosController.js && node --check middleware/auth.js && node --check routes/index.js && node --check routes/authRoutes.js && node --check routes/rideRoutes.js && node --check routes/driverRoutes.js && node --check routes/adminRoutes.js && node --check routes/supportRoutes.js && node --check routes/eventRoutes.js && node --check utils/http.js && node --check utils/password.js && node --check utils/token.js && node --check utils/fareCalculator.js && node --check utils/object.js && node --check utils/staticServer.js"
+    "check": "node --check index.js && node --check config/env.js && node --check connect/database.js && node --check connect/seed.js && node --check controllers/authController.js && node --check controllers/rideController.js && node --check controllers/driverController.js && node --check controllers/adminController.js && node --check controllers/eventController.js && node --check controllers/sosController.js && node --check middleware/auth.js && node --check routes/index.js && node --check routes/authRoutes.js && node --check routes/rideRoutes.js && node --check routes/driverRoutes.js && node --check routes/adminRoutes.js && node --check routes/supportRoutes.js && node --check routes/eventRoutes.js && node --check utils/http.js && node --check utils/password.js && node --check utils/token.js && node --check utils/fareCalculator.js && node --check utils/object.js && node --check utils/staticServer.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "VARAS 2.0 native Node API scaffold"
+  "description": "VARAS 2.0 native Node API scaffold",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "varas-2-deployable": "file:.."
+  }
 }

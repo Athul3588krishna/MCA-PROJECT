@@ -108,30 +108,30 @@ function RoleAuthPage({ loading, notice, onAuth, onBack, role, setRole }) {
 function defaultAuthForm(role) {
   if (role === 'Admin') {
     return {
-      identifier: 'admin@varas.local',
-      password: 'varas@2026',
-      name: 'VARAS Admin',
-      mobile: '+910000000000',
-      email: 'admin@varas.local',
+      identifier: '',
+      password: '',
+      name: '',
+      mobile: '',
+      email: '',
     }
   }
 
   if (role === 'Driver') {
     return {
-      identifier: '+919876543299',
-      password: 'varas@2026',
-      name: 'Driver Partner',
-      mobile: '+919876543299',
-      email: 'driver@varas.local',
+      identifier: '',
+      password: '',
+      name: '',
+      mobile: '',
+      email: '',
     }
   }
 
   return {
-    identifier: '+919876543299',
-    password: 'varas@2026',
-    name: 'Passenger User',
-    mobile: '+919876543299',
-    email: 'passenger@varas.local',
+    identifier: '',
+    password: '',
+    name: '',
+    mobile: '',
+    email: '',
   }
 }
 

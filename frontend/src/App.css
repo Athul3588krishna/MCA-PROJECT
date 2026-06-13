@@ -573,6 +573,8 @@ select {
 
 .map-canvas {
   position: relative;
+  display: grid;
+  place-items: center;
   min-height: 320px;
   overflow: hidden;
   background:
@@ -580,6 +582,16 @@ select {
     linear-gradient(0deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
     #18545a;
   background-size: 42px 42px;
+}
+
+.map-empty-state {
+  position: relative;
+  z-index: 2;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #123b3f;
+  font-weight: 900;
 }
 
 .map-road,
@@ -891,6 +903,16 @@ meter {
 .event-feed span {
   color: #6a7d7d;
   font-size: 0.82rem;
+}
+
+.empty-state {
+  margin: 0;
+  border: 1px dashed #c8d7d1;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfdfc;
+  color: #607475;
+  font-weight: 800;
 }
 
 .area-bars {

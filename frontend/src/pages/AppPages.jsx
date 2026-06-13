@@ -1,7 +1,7 @@
 const supportTemplates = [
-  { title: 'Late pickup', owner: 'Passenger', priority: 'Medium', status: 'Open' },
-  { title: 'Payment mismatch', owner: 'Driver', priority: 'High', status: 'Review' },
-  { title: 'Route concern', owner: 'Passenger', priority: 'Low', status: 'Open' },
+  { title: 'Ride support request', owner: 'Passenger', priority: 'Medium', status: 'Open' },
+  { title: 'Driver support request', owner: 'Driver', priority: 'Medium', status: 'Open' },
+  { title: 'Payment support request', owner: 'Passenger', priority: 'High', status: 'Open' },
 ]
 
 function PageContent(props) {
@@ -171,10 +171,10 @@ function RidesPage({ rides, setActiveRide, setActivePage, updateRideStatus }) {
 
 function RequestsPage({ rides, updateRideStatus }) {
   return (
-    <section className="panel">
-      <PanelTitle label="Incoming requests" value="Live queue" />
-      <div className="request-list">
-        {rides.map((ride) => (
+      <section className="panel">
+        <PanelTitle label="Incoming requests" value="Live queue" />
+        <div className="request-list">
+          {rides.map((ride) => (
           <article className="request-card" key={ride.id}>
             <div>
               <h3>{ride.id}</h3>
@@ -188,8 +188,9 @@ function RequestsPage({ rides, updateRideStatus }) {
             </div>
           </article>
         ))}
-      </div>
-    </section>
+          {!rides.length && <EmptyState message="Incoming ride requests will appear here." />}
+        </div>
+      </section>
   )
 }
 
@@ -252,13 +253,14 @@ function AnalyticsPage({ analytics, stats }) {
       <section className="panel span-2">
         <PanelTitle label="Area ride statistics" value={`${areaStats.length} areas`} />
         <div className="area-bars">
-          {(areaStats.length ? areaStats : [['Infopark Gate', 1], ['Vyttila Hub', 1]]).map(([area, count]) => (
+          {areaStats.map(([area, count]) => (
             <article key={area}>
               <span>{area}</span>
               <div><i style={{ width: `${Math.min(100, Number(count) * 34)}%` }} /></div>
               <strong>{count}</strong>
             </article>
           ))}
+          {!areaStats.length && <EmptyState message="Area statistics will appear after rides are booked." />}
         </div>
       </section>
     </div>
@@ -279,13 +281,14 @@ function SupportPage({ complaints, createSupportComplaint, sendSos, token }) {
               <small>{complaint.status}</small>
             </article>
           ))}
+          {!complaints.length && <EmptyState message="Support tickets will appear here." />}
         </div>
       </section>
       <section className="panel">
         <PanelTitle label="Create ticket" value="Support" />
         <div className="action-stack">
           {supportTemplates.map((template) => (
-            <button key={template.title} onClick={() => createSupportComplaint(template)}>
+            <button disabled={!token} key={template.title} onClick={() => createSupportComplaint(template)}>
               {template.title}
             </button>
           ))}
@@ -303,17 +306,17 @@ function ProfilePage({ role, token, user }) {
         <PanelTitle label="Account" value={token ? 'Signed in' : 'Guest'} />
         <InfoList
           items={[
-            ['Name', user?.name || `${role} User`],
+            ['Name', user?.name || 'Not signed in'],
             ['Role', user?.role || role],
-            ['Mobile', user?.mobile || '+919876543299'],
-            ['Email', user?.email || 'admin@varas.local'],
+            ['Mobile', user?.mobile || 'Not provided'],
+            ['Email', user?.email || 'Not provided'],
           ]}
         />
       </section>
       <section className="panel span-2">
         <PanelTitle label="Deployment checklist" value="Ready" />
         <div className="checklist">
-          {['Vite production build', 'Static serving from backend', 'JWT login flow', 'API fallback data', 'Responsive pages'].map((item) => (
+          {['Vite production build', 'Static serving from backend', 'JWT login flow', 'Environment-based secrets', 'Responsive pages'].map((item) => (
             <span key={item}>{item}</span>
           ))}
         </div>
@@ -348,6 +351,7 @@ function LiveMapCanvas({ drivers }) {
           A
         </span>
       ))}
+      {!drivers.length && <span className="map-empty-state">No active drivers</span>}
     </div>
   )
 }
@@ -369,6 +373,7 @@ function DriverCards({ admin = false, drivers, updateDriverStatus }) {
           </div>
         </article>
       ))}
+      {!drivers.length && <EmptyState message="Driver records will appear after partners register and are verified." />}
     </div>
   )
 }
@@ -391,6 +396,7 @@ function RideTable({ onSelect, rides, updateRideStatus }) {
           )}
         </article>
       ))}
+      {!rides.length && <EmptyState message="Ride records will appear after the first booking." />}
     </div>
   )
 }
@@ -407,6 +413,7 @@ function HotspotList({ analytics }) {
           <meter min="0" max="100" value={spot.demand}>{spot.demand}</meter>
         </article>
       ))}
+      {!(analytics.demandPrediction || []).length && <EmptyState message="Demand insights will appear after ride activity is available." />}
     </div>
   )
 }
@@ -420,8 +427,13 @@ function EventFeed({ events }) {
           <span>{new Date(event.createdAt).toLocaleString()}</span>
         </article>
       ))}
+      {!events.length && <EmptyState message="Activity events will appear here." />}
     </div>
   )
+}
+
+function EmptyState({ message }) {
+  return <p className="empty-state">{message}</p>
 }
 
 function InfoList({ items }) {

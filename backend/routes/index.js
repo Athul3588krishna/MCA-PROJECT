@@ -18,8 +18,8 @@ async function handleApiRoutes(req, res, url) {
   const user = authenticate(req)
   const routeHandlers = [
     (request, response, requestUrl) => handleRideRoutes(request, response, requestUrl, user),
+    (request, response, requestUrl) => handleSupportRoutes(request, response, requestUrl, user),
     handleDriverRoutes,
-    handleSupportRoutes,
     handleAdminRoutes,
     handleEventRoutes,
   ]

@@ -1,16 +1,17 @@
 const { db, saveDb } = require('../connect/database')
+const env = require('../config/env')
 const { hashPassword, verifyPassword } = require('../utils/password')
 const { signToken } = require('../utils/token')
 
 function seedAdmin() {
-  if (db.users.some((user) => user.id === 'U-ADMIN' || user.email === 'admin@varas.local')) return
+  if (db.users.some((user) => user.id === 'U-ADMIN' || user.email === env.adminEmail || user.mobile === env.adminMobile)) return
   db.users.push({
     id: 'U-ADMIN',
     role: 'Admin',
-    name: 'VARAS Admin',
-    email: 'admin@varas.local',
-    mobile: '+910000000000',
-    password: hashPassword('varas@2026'),
+    name: env.adminName,
+    email: env.adminEmail,
+    mobile: env.adminMobile,
+    password: hashPassword(env.adminPassword),
   })
   saveDb()
 }
@@ -34,6 +35,20 @@ function register(body) {
   }
 
   db.users.push(user)
+  if (user.role === 'Driver' && !db.drivers.some((driver) => driver.mobile === user.mobile)) {
+    db.drivers.push({
+      id: `D-${Date.now()}`,
+      name: user.name,
+      mobile: user.mobile,
+      auto: body.auto || 'Pending vehicle details',
+      area: body.area || 'Unassigned',
+      status: 'Offline',
+      verified: false,
+      rating: 0,
+      earnings: 0,
+      userId: user.id,
+    })
+  }
   saveDb()
   return publicUser(user, signToken(user))
 }

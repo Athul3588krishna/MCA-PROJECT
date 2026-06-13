@@ -1,4 +1,4 @@
-const { db } = require('../connect/database')
+const { db, saveDb } = require('../connect/database')
 
 function getAnalytics() {
   const completed = db.rides.filter((ride) => ride.status === 'Completed')
@@ -8,19 +8,24 @@ function getAnalytics() {
     return areas
   }, {})
 
+  const busiestArea = Object.entries(peakAreas).sort((a, b) => b[1] - a[1])[0]
+
   return {
     ridesToday: db.rides.length,
     monthlyRevenue: revenue,
     averageRating: completed.reduce((sum, ride) => sum + ride.rating, 0) / completed.length || 0,
     onlineDrivers: db.drivers.filter((driver) => driver.status === 'Online').length,
     pendingVerifications: db.drivers.filter((driver) => !driver.verified).length,
-    peakBookingTime: '08:00 AM - 10:00 AM',
+    peakBookingTime: busiestArea ? 'Based on current bookings' : 'No ride data yet',
     areaWiseRideStatistics: peakAreas,
-    demandPrediction: [
-      { area: 'Infopark', demand: 92, recommendation: 'Move 3 drivers nearby' },
-      { area: 'Vyttila', demand: 81, recommendation: 'Keep surge at 1.2x' },
-      { area: 'Edappally', demand: 76, recommendation: 'Notify idle drivers' },
-    ],
+    demandPrediction: Object.entries(peakAreas)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([area, count]) => ({
+        area,
+        demand: Math.min(100, count * 20),
+        recommendation: `Review driver availability near ${area}`,
+      })),
   }
 }
 
@@ -28,7 +33,26 @@ function listComplaints() {
   return db.complaints
 }
 
+function createComplaint(body, user) {
+  if (!body.title) throw Object.assign(new Error('title is required'), { status: 400 })
+
+  const complaint = {
+    id: `C-${Date.now()}`,
+    title: body.title,
+    owner: body.owner || user.role || 'Passenger',
+    priority: body.priority || 'Medium',
+    status: body.status || 'Open',
+    createdBy: user.id,
+    createdAt: new Date().toISOString(),
+  }
+
+  db.complaints.unshift(complaint)
+  saveDb()
+  return complaint
+}
+
 module.exports = {
+  createComplaint,
   getAnalytics,
   listComplaints,
 }
