@@ -4,15 +4,22 @@ const { hashPassword, verifyPassword } = require('../utils/password')
 const { signToken } = require('../utils/token')
 
 function seedAdmin() {
-  if (db.users.some((user) => user.id === 'U-ADMIN' || user.email === env.adminEmail || user.mobile === env.adminMobile)) return
-  db.users.push({
+  const admin = db.users.find((user) => user.id === 'U-ADMIN')
+  const adminData = {
     id: 'U-ADMIN',
     role: 'Admin',
     name: env.adminName,
     email: env.adminEmail,
     mobile: env.adminMobile,
     password: hashPassword(env.adminPassword),
-  })
+  }
+
+  if (admin) {
+    Object.assign(admin, adminData)
+  } else {
+    db.users.push(adminData)
+  }
+
   saveDb()
 }
 

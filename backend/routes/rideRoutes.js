@@ -3,7 +3,7 @@ const { readBody, send } = require('../utils/http')
 
 async function handleRideRoutes(req, res, url, user) {
   if (req.method === 'GET' && url.pathname === '/api/rides') {
-    return send(res, 200, rideController.listRides())
+    return send(res, 200, rideController.listRides(user))
   }
 
   if (req.method === 'POST' && url.pathname === '/api/rides') {
@@ -14,7 +14,7 @@ async function handleRideRoutes(req, res, url, user) {
   if (req.method === 'PATCH' && url.pathname.startsWith('/api/rides/')) {
     const id = url.pathname.split('/').at(-1)
     const body = await readBody(req)
-    return send(res, 200, rideController.updateRide(id, body))
+    return send(res, 200, rideController.updateRide(id, body, user))
   }
 
   return false

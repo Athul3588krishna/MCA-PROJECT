@@ -82,7 +82,8 @@ function App() {
         ...options.headers,
       },
     })
-    const data = response.status === 204 ? null : await response.json()
+    const text = response.status === 204 ? '' : await response.text()
+    const data = text ? JSON.parse(text) : null
     if (!response.ok) throw new Error(data?.error || 'Request failed')
     return data
   }

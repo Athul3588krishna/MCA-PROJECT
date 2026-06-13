@@ -3,8 +3,8 @@ const { estimateFare } = require('../utils/fareCalculator')
 const { pick } = require('../utils/object')
 const { publish } = require('./eventController')
 
-function listRides() {
-  return db.rides.map(hydrateRide)
+function listRides(user) {
+  return db.rides.filter((ride) => canReadRide(ride, user)).map(hydrateRide)
 }
 
 function createRide(body, user) {
@@ -21,6 +21,7 @@ function createRide(body, user) {
   const driver = allocateDriver(body.pickup)
   const ride = {
     id: `VR-${2050 + db.rides.length}`,
+    passengerId: user.id,
     passenger: body.passenger || user.name || 'Passenger',
     pickup: body.pickup,
     destination: body.destination,
@@ -38,11 +39,13 @@ function createRide(body, user) {
   return hydrateRide(ride)
 }
 
-function updateRide(id, body) {
+function updateRide(id, body, user) {
   const ride = db.rides.find((item) => item.id === id)
   if (!ride) throw Object.assign(new Error('Ride not found'), { status: 404 })
+  if (!canUpdateRide(ride, user)) throw Object.assign(new Error('Ride access denied'), { status: 403 })
 
-  Object.assign(ride, pick(body, ['status', 'driverId', 'rating', 'feedback']))
+  const allowedFields = user.role === 'Passenger' ? ['rating', 'feedback'] : ['status', 'driverId', 'rating', 'feedback']
+  Object.assign(ride, pick(body, allowedFields))
   saveDb()
   publish('ride:updated', ride)
   return hydrateRide(ride)
@@ -58,6 +61,26 @@ function hydrateRide(ride) {
 function allocateDriver(pickup = '') {
   const online = db.drivers.filter((driver) => driver.status === 'Online' && driver.verified)
   return online.find((driver) => pickup.toLowerCase().includes(driver.area.toLowerCase())) || online[0]
+}
+
+function canReadRide(ride, user) {
+  if (user.role === 'Admin') return true
+  if (user.role === 'Passenger') return ride.passengerId === user.id || (!ride.passengerId && ride.passenger === user.name)
+  if (user.role === 'Driver') {
+    const driver = db.drivers.find((item) => item.userId === user.id || item.mobile === user.mobile)
+    return driver ? ride.driverId === driver.id || (!ride.driverId && ride.status === 'Searching') : false
+  }
+  return false
+}
+
+function canUpdateRide(ride, user) {
+  if (user.role === 'Admin') return true
+  if (user.role === 'Passenger') return ride.passengerId === user.id
+  if (user.role === 'Driver') {
+    const driver = db.drivers.find((item) => item.userId === user.id || item.mobile === user.mobile)
+    return driver ? ride.driverId === driver.id || (!ride.driverId && ride.status === 'Searching') : false
+  }
+  return false
 }
 
 module.exports = {
