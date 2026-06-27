@@ -1,4 +1,4 @@
-const roles = ['Passenger', 'Driver', 'Admin']
+const roles = ['Passenger', 'Driver']
 
 function PublicHome({ onSelectRole, stats }) {
   return (
@@ -12,8 +12,7 @@ function PublicHome({ onSelectRole, stats }) {
           </div>
         </div>
         <div className="home-nav-actions">
-          <button onClick={() => onSelectRole('Passenger')}>Passenger Login</button>
-          <button className="primary" onClick={() => onSelectRole('Admin')}>Admin Login</button>
+          <button className="primary" onClick={() => onSelectRole('Passenger')}>Passenger Login</button>
         </div>
       </header>
 
@@ -28,7 +27,6 @@ function PublicHome({ onSelectRole, stats }) {
           <div className="hero-actions">
             <button className="primary" onClick={() => onSelectRole('Passenger')}>Book as passenger</button>
             <button onClick={() => onSelectRole('Driver')}>Join as driver</button>
-            <button onClick={() => onSelectRole('Admin')}>Admin console</button>
           </div>
         </div>
 
@@ -53,7 +51,7 @@ function PublicHome({ onSelectRole, stats }) {
       <section className="role-gateway" aria-label="Choose login type">
         {roles.map((item) => (
           <article key={item}>
-            <span>{navIcon(item === 'Passenger' ? 'Book Ride' : item === 'Driver' ? 'Vehicle' : 'Analytics')}</span>
+            <span>{navIcon(item === 'Passenger' ? 'Book Ride' : 'Vehicle')}</span>
             <h3>{item}</h3>
             <p>{roleDescription(item)}</p>
             <div className="button-row">

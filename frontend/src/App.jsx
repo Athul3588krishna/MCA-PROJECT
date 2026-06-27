@@ -68,10 +68,23 @@ function App() {
   }, [activePage, pages])
 
   useEffect(() => {
-    if (token) refreshData(token)
+    if (token) refreshData(token, role)
     // The refresh function reads the latest UI state; this effect should only react to auth changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token])
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === '#admin') {
+        window.location.hash = '' // Clear the hash from the address bar
+        openRoleAuth('Admin')
+      }
+    }
+
+    handleHashChange() // Check on initial load
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
 
   async function api(path, options = {}) {
     const response = await fetch(`${API_BASE}${path}`, {
