@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react'
+
 const supportTemplates = [
   { title: 'Ride support request', owner: 'Passenger', priority: 'Medium', status: 'Open' },
   { title: 'Driver support request', owner: 'Driver', priority: 'Medium', status: 'Open' },
@@ -120,7 +122,7 @@ function BookingPage({ booking, bookRide, fare, setBooking, token }) {
   )
 }
 
-function TrackingPage({ activeRide, drivers, fare, sendSos, token, updateRideStatus }) {
+function TrackingPage({ activeRide, drivers, fare, role, sendSos, token, updateRideStatus }) {
   return (
     <div className="content-grid">
       <section className="map-panel span-2">
@@ -137,7 +139,7 @@ function TrackingPage({ activeRide, drivers, fare, sendSos, token, updateRideSta
         <PanelTitle label="Ride controls" value={activeRide?.status || 'Idle'} />
         <div className="timeline">
           {['Requested', 'Accepted', 'On trip', 'Completed'].map((step) => (
-            <button className={activeRide?.status === step ? 'step active-step' : 'step'} disabled={!token || !activeRide} key={step} onClick={() => updateRideStatus(activeRide.id, step)}>
+            <button className={activeRide?.status === step ? 'step active-step' : 'step'} disabled={role === 'Passenger' || !token || !activeRide} key={step} onClick={() => updateRideStatus(activeRide.id, step)}>
               {step}
             </button>
           ))}
@@ -216,11 +218,60 @@ function EarningsPage({ drivers, rides, stats }) {
 }
 
 function VehiclePage({ drivers, updateDriverStatus }) {
+  const driver = drivers[0]
+  const [auto, setAuto] = useState(driver?.auto || '')
+  const [area, setArea] = useState(driver?.area || '')
+
+  useEffect(() => {
+    if (driver) {
+      setAuto(driver.auto || '')
+      setArea(driver.area || '')
+    }
+  }, [driver])
+
+  const handleSave = (e) => {
+    e.preventDefault()
+    if (driver) {
+      updateDriverStatus(driver.id, { auto, area })
+    }
+  }
+
   return (
-    <section className="panel">
-      <PanelTitle label="Vehicle and availability" value="Driver profile" />
-      <DriverCards drivers={drivers} updateDriverStatus={updateDriverStatus} />
-    </section>
+    <div className="content-grid">
+      <section className="panel">
+        <PanelTitle label="Vehicle & Area Profile" value={driver?.status || 'Offline'} />
+        <form className="professional-form" onSubmit={handleSave}>
+          <label>
+            Auto Rickshaw Details (e.g. Plate Number)
+            <input value={auto} onChange={(e) => setAuto(e.target.value)} required />
+          </label>
+          <label>
+            Operating Area / Route
+            <input value={area} onChange={(e) => setArea(e.target.value)} required />
+          </label>
+          <button className="primary wide" type="submit">Save Profile</button>
+        </form>
+      </section>
+      
+      <section className="panel">
+        <PanelTitle label="Status & Availability" value="Controls" />
+        <div className="driver-list" style={{ marginTop: '20px' }}>
+          {driver && (
+            <article className="driver-card" style={{ padding: '0', border: 'none', background: 'transparent' }}>
+              <div className="driver-actions" style={{ width: '100%', justifyContent: 'space-between' }}>
+                <div>
+                  <strong>Status: {driver.status}</strong>
+                  <p style={{ margin: '5px 0 0', color: '#666' }}>{driver.verified ? '✓ Verified Partner' : '✗ Needs Verification'}</p>
+                </div>
+                <button className="primary" onClick={() => updateDriverStatus(driver.id)}>
+                  Toggle {driver.status === 'Online' ? 'Offline' : 'Online'}
+                </button>
+              </div>
+            </article>
+          )}
+        </div>
+      </section>
+    </div>
   )
 }
 

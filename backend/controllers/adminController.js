@@ -2,7 +2,7 @@ const { db, saveDb } = require('../connect/database')
 
 function getAnalytics() {
   const completed = db.rides.filter((ride) => ride.status === 'Completed')
-  const revenue = db.rides.reduce((sum, ride) => sum + ride.fare, 0)
+  const revenue = completed.reduce((sum, ride) => sum + ride.fare, 0)
   const peakAreas = db.rides.reduce((areas, ride) => {
     areas[ride.pickup] = (areas[ride.pickup] || 0) + 1
     return areas

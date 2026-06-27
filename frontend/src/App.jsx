@@ -8,11 +8,11 @@ const API_BASE = import.meta.env.VITE_API_BASE || ''
 const roles = ['Passenger', 'Driver', 'Admin']
 
 const emptyAnalytics = {
-  ridesToday: 0,
-  monthlyRevenue: 0,
-  averageRating: 0,
-  onlineDrivers: 0,
-  pendingVerifications: 0,
+  ridesToday: null,
+  monthlyRevenue: null,
+  averageRating: null,
+  onlineDrivers: null,
+  pendingVerifications: null,
   peakBookingTime: 'No ride data yet',
   areaWiseRideStatistics: {},
   demandPrediction: [],
@@ -84,22 +84,38 @@ function App() {
     })
     const text = response.status === 204 ? '' : await response.text()
     const data = text ? JSON.parse(text) : null
+    if (response.status === 401) {
+      logout()
+      throw new Error(data?.error || 'Session expired. Please log in again.')
+    }
     if (!response.ok) throw new Error(data?.error || 'Request failed')
     return data
   }
 
-  async function refreshData(activeToken = token) {
+  async function refreshData(activeToken = token, activeRole = role) {
     if (!activeToken) return
     setLoading(true)
     try {
       const headers = { Authorization: `Bearer ${activeToken}` }
-      const [rideData, driverData, complaintData, analyticsData, eventData] = await Promise.all([
+      
+      const promises = [
         api('/api/rides', { headers }),
         api('/api/drivers', { headers }),
-        api('/api/admin/complaints', { headers }),
-        api('/api/admin/analytics', { headers }),
         api('/api/events', { headers }),
-      ])
+      ]
+      
+      const isAdmin = activeRole === 'Admin'
+      if (isAdmin) {
+        promises.push(api('/api/admin/complaints', { headers }))
+        promises.push(api('/api/admin/analytics', { headers }))
+      }
+      
+      const results = await Promise.all(promises)
+      const rideData = results[0]
+      const driverData = results[1]
+      const eventData = results[2]
+      const complaintData = isAdmin ? results[3] : []
+      const analyticsData = isAdmin ? results[4] : emptyAnalytics
 
       setRides(rideData)
       setDrivers(driverData)
@@ -298,13 +314,15 @@ function App() {
             <h1>{activePage}</h1>
           </div>
           <div className="topbar-actions">
-            <div className="role-tabs" aria-label="Role selector">
-              {roles.map((item) => (
-                <button className={role === item ? 'active' : ''} key={item} onClick={() => setRole(item)}>
-                  {item}
-                </button>
-              ))}
-            </div>
+            {!token && (
+              <div className="role-tabs" aria-label="Role selector">
+                {roles.map((item) => (
+                  <button className={role === item ? 'active' : ''} key={item} onClick={() => setRole(item)}>
+                    {item}
+                  </button>
+                ))}
+              </div>
+            )}
             <AccountMenu onGoHome={() => setScreen('home')} onLogout={logout} token={token} user={user} />
           </div>
         </header>

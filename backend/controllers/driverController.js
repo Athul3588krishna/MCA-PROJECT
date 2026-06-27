@@ -18,7 +18,7 @@ function updateDriver(id, body, user) {
     throw Object.assign(new Error('Driver access denied'), { status: 403 })
   }
 
-  const allowedFields = user.role === 'Admin' ? ['status', 'verified', 'area'] : ['status', 'area']
+  const allowedFields = user.role === 'Admin' ? ['status', 'verified', 'area', 'auto'] : ['status', 'area', 'auto']
   Object.assign(driver, pick(body, allowedFields))
   saveDb()
   publish('driver:updated', driver)

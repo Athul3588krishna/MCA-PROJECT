@@ -45,7 +45,36 @@ function updateRide(id, body, user) {
   if (!canUpdateRide(ride, user)) throw Object.assign(new Error('Ride access denied'), { status: 403 })
 
   const allowedFields = user.role === 'Passenger' ? ['rating', 'feedback'] : ['status', 'driverId', 'rating', 'feedback']
-  Object.assign(ride, pick(body, allowedFields))
+  const updates = pick(body, allowedFields)
+
+  if (user.role === 'Driver') {
+    const driver = db.drivers.find((item) => item.userId === user.id || item.mobile === user.mobile)
+    if (driver) {
+      if (updates.status === 'Accepted' && !ride.driverId) {
+        updates.driverId = driver.id
+      }
+    }
+  }
+
+  if (updates.status === 'Completed' && ride.status !== 'Completed' && ride.driverId) {
+    const driver = db.drivers.find((d) => d.id === ride.driverId)
+    if (driver) {
+      driver.earnings = (driver.earnings || 0) + ride.fare
+    }
+  }
+
+  if (updates.rating && updates.rating !== ride.rating && ride.driverId) {
+    const driver = db.drivers.find((d) => d.id === ride.driverId)
+    if (driver) {
+      const driverRides = db.rides.filter((r) => r.driverId === driver.id && r.id !== ride.id)
+      const allRatings = driverRides.map((r) => r.rating).filter((r) => r > 0)
+      allRatings.push(updates.rating)
+      const avgRating = allRatings.reduce((sum, r) => sum + r, 0) / allRatings.length
+      driver.rating = Number(avgRating.toFixed(1))
+    }
+  }
+
+  Object.assign(ride, updates)
   saveDb()
   publish('ride:updated', ride)
   return hydrateRide(ride)
