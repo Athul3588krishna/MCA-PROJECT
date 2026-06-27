@@ -144,6 +144,17 @@ function TrackingPage({ activeRide, drivers, fare, role, sendSos, token, updateR
             </button>
           ))}
         </div>
+
+        {activeRide?.status === 'Accepted' && role === 'Passenger' && activeRide.otp && (
+          <div className="safety-panel compact-panel" style={{ background: '#eef6ff', borderColor: '#bcd8f3', marginTop: '15px' }}>
+            <div>
+              <span className="brand-mark" style={{ background: '#0070f3', fontSize: '12px' }}>OTP</span>
+              <h3 style={{ color: '#0070f3' }}>Share OTP to Start Trip</h3>
+              <p>Tell your driver this code to verify your ride: <strong style={{ fontSize: '18px', color: '#333' }}>{activeRide.otp}</strong></p>
+            </div>
+          </div>
+        )}
+
         <div className="safety-panel compact-panel">
           <div>
             <span className="sos">SOS</span>
@@ -173,26 +184,68 @@ function RidesPage({ rides, setActiveRide, setActivePage, updateRideStatus }) {
 
 function RequestsPage({ rides, updateRideStatus }) {
   return (
-      <section className="panel">
-        <PanelTitle label="Incoming requests" value="Live queue" />
-        <div className="request-list">
-          {rides.map((ride) => (
-          <article className="request-card" key={ride.id}>
-            <div>
-              <h3>{ride.id}</h3>
-              <p>{ride.pickup} to {ride.destination}</p>
-              <span>Fare Rs {ride.fare} - {ride.distance || 1} km</span>
-            </div>
-            <div className="button-row compact">
-              <button onClick={() => updateRideStatus(ride.id, 'Accepted')}>Accept</button>
-              <button onClick={() => updateRideStatus(ride.id, 'Rejected')}>Reject</button>
-              <button className="primary" onClick={() => updateRideStatus(ride.id, 'Completed')}>Complete</button>
-            </div>
-          </article>
+    <section className="panel">
+      <PanelTitle label="Incoming requests" value="Live queue" />
+      <div className="request-list">
+        {rides.map((ride) => (
+          <RequestCard key={ride.id} ride={ride} updateRideStatus={updateRideStatus} />
         ))}
-          {!rides.length && <EmptyState message="Incoming ride requests will appear here." />}
+        {!rides.length && <EmptyState message="Incoming ride requests will appear here." />}
+      </div>
+    </section>
+  )
+}
+
+function RequestCard({ ride, updateRideStatus }) {
+  const [otpInput, setOtpInput] = useState('')
+
+  const handleStartTrip = () => {
+    if (!otpInput) return
+    updateRideStatus(ride.id, 'On trip', { otp: otpInput })
+  }
+
+  return (
+    <article className="request-card" key={ride.id}>
+      <div>
+        <h3>{ride.id}</h3>
+        <p>{ride.pickup} to {ride.destination}</p>
+        <span>Fare Rs {ride.fare} - {ride.distance || 1} km</span>
+        <div style={{ marginTop: '5px' }}>
+          <strong>Status: <span style={{ color: ride.status === 'Accepted' ? '#0070f3' : ride.status === 'On trip' ? '#00b0ff' : '#666' }}>{ride.status}</span></strong>
         </div>
-      </section>
+      </div>
+      <div className="button-row compact" style={{ flexWrap: 'wrap', gap: '10px', marginTop: '10px' }}>
+        {ride.status === 'Searching' && (
+          <>
+            <button onClick={() => updateRideStatus(ride.id, 'Accepted')}>Accept</button>
+            <button onClick={() => updateRideStatus(ride.id, 'Rejected')}>Reject</button>
+          </>
+        )}
+        {ride.status === 'Accepted' && (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%' }}>
+            <input
+              placeholder="Enter OTP"
+              type="text"
+              maxLength="4"
+              value={otpInput}
+              onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
+              style={{ padding: '6px 10px', width: '110px', border: '1px solid #ccc', borderRadius: '4px' }}
+            />
+            <button className="primary" onClick={handleStartTrip} disabled={otpInput.length !== 4}>
+              Start Trip
+            </button>
+          </div>
+        )}
+        {ride.status === 'On trip' && (
+          <button className="primary" onClick={() => updateRideStatus(ride.id, 'Completed')}>
+            Complete Trip
+          </button>
+        )}
+        {ride.status === 'Completed' && (
+          <span style={{ color: '#4caf50', fontWeight: 'bold' }}>✓ Completed</span>
+        )}
+      </div>
+    </article>
   )
 }
 

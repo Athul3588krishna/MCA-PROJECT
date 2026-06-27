@@ -217,9 +217,9 @@ function App() {
     }
   }
 
-  async function updateRideStatus(id, status) {
+  async function updateRideStatus(id, status, patch = {}) {
     try {
-      const ride = await api(`/api/rides/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) })
+      const ride = await api(`/api/rides/${id}`, { method: 'PATCH', body: JSON.stringify({ status, ...patch }) })
       setRides((current) => current.map((item) => (item.id === id ? ride : item)))
       setActiveRide((current) => (current?.id === id ? ride : current))
       setNotice(`Ride update: ${id} is now ${status}.`)

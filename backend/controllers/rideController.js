@@ -4,7 +4,7 @@ const { pick } = require('../utils/object')
 const { publish } = require('./eventController')
 
 function listRides(user) {
-  return db.rides.filter((ride) => canReadRide(ride, user)).map(hydrateRide)
+  return db.rides.filter((ride) => canReadRide(ride, user)).map((ride) => sanitizeRide(ride, user))
 }
 
 function createRide(body, user) {
@@ -29,6 +29,7 @@ function createRide(body, user) {
     fare: estimateFare(distance, peak),
     distance,
     status: driver ? 'Accepted' : 'Searching',
+    otp: Math.floor(1000 + Math.random() * 9000).toString(),
     rating: 0,
     createdAt: new Date().toISOString(),
   }
@@ -36,7 +37,7 @@ function createRide(body, user) {
   db.rides.unshift(ride)
   saveDb()
   publish('ride:requested', ride)
-  return hydrateRide(ride)
+  return sanitizeRide(ride, user)
 }
 
 function updateRide(id, body, user) {
@@ -52,6 +53,14 @@ function updateRide(id, body, user) {
     if (driver) {
       if (updates.status === 'Accepted' && !ride.driverId) {
         updates.driverId = driver.id
+      }
+    }
+  }
+
+  if (updates.status === 'On trip') {
+    if (user.role === 'Driver') {
+      if (body.otp !== ride.otp) {
+        throw Object.assign(new Error('Invalid Ride OTP'), { status: 400 })
       }
     }
   }
@@ -77,7 +86,7 @@ function updateRide(id, body, user) {
   Object.assign(ride, updates)
   saveDb()
   publish('ride:updated', ride)
-  return hydrateRide(ride)
+  return sanitizeRide(ride, user)
 }
 
 function hydrateRide(ride) {
@@ -85,6 +94,15 @@ function hydrateRide(ride) {
     ...ride,
     driver: db.drivers.find((driver) => driver.id === ride.driverId) || null,
   }
+}
+
+function sanitizeRide(ride, user) {
+  const hydrated = hydrateRide(ride)
+  if (user && user.role === 'Driver' && ride.status === 'Accepted') {
+    const { otp, ...sanitized } = hydrated
+    return sanitized
+  }
+  return hydrated
 }
 
 function allocateDriver(pickup = '') {
