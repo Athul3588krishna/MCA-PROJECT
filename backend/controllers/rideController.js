@@ -68,7 +68,8 @@ function updateRide(id, body, user) {
   if (updates.status === 'Completed' && ride.status !== 'Completed' && ride.driverId) {
     const driver = db.drivers.find((d) => d.id === ride.driverId)
     if (driver) {
-      driver.earnings = (driver.earnings || 0) + ride.fare
+      const netEarnings = Math.round(ride.fare * 0.85) // 85% goes to driver, 15% platform commission
+      driver.earnings = (driver.earnings || 0) + netEarnings
     }
   }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import PageContent from './pages/AppPages'
 import PublicHome from './pages/PublicHome'
 import RoleAuthPage from './pages/RoleAuthPage'
@@ -10,6 +10,7 @@ const roles = ['Passenger', 'Driver', 'Admin']
 const emptyAnalytics = {
   ridesToday: null,
   monthlyRevenue: null,
+  platformCommission: null,
   averageRating: null,
   onlineDrivers: null,
   pendingVerifications: null,
@@ -28,6 +29,8 @@ function App() {
   const [role, setRole] = useState('Passenger')
   const [screen, setScreen] = useState(() => (localStorage.getItem('varasToken') ? 'app' : 'home'))
   const [activePage, setActivePage] = useState('Dashboard')
+  const [activeSosAlert, setActiveSosAlert] = useState(null)
+  const sirenRef = useRef(null)
   const [token, setToken] = useState(() => localStorage.getItem('varasToken') || '')
   const [user, setUser] = useState(() => readStoredUser())
   const [rides, setRides] = useState([])
@@ -56,6 +59,7 @@ function App() {
     return {
       rides: analytics.ridesToday ?? rides.length,
       revenue: analytics.monthlyRevenue ?? revenue,
+      platformCommission: analytics.platformCommission ?? Math.round(revenue * 0.15),
       avgRating: Number(analytics.averageRating || avgRating).toFixed(1),
       onlineDrivers: analytics.onlineDrivers ?? drivers.filter((driver) => driver.status === 'Online').length,
       pendingVerifications: analytics.pendingVerifications ?? drivers.filter((driver) => !driver.verified).length,
@@ -85,6 +89,78 @@ function App() {
     window.addEventListener('hashchange', handleHashChange)
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
+
+  const playSiren = () => {
+    if (sirenRef.current) return // Already playing
+
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext
+      if (!AudioContext) return
+      
+      const audioCtx = new AudioContext()
+      
+      const osc1 = audioCtx.createOscillator()
+      const osc2 = audioCtx.createOscillator()
+      const gainNode = audioCtx.createGain()
+      
+      osc1.type = 'sine'
+      osc1.frequency.setValueAtTime(300, audioCtx.currentTime)
+      
+      osc2.type = 'sine'
+      osc2.frequency.setValueAtTime(800, audioCtx.currentTime)
+      
+      const modulator = audioCtx.createOscillator()
+      modulator.frequency.value = 2.5 // Speed (Hz)
+      
+      const modGain = audioCtx.createGain()
+      modGain.gain.value = 250
+      
+      modulator.connect(modGain)
+      modGain.connect(osc1.frequency)
+      modGain.connect(osc2.frequency)
+      
+      osc1.connect(gainNode)
+      osc2.connect(gainNode)
+      gainNode.connect(audioCtx.destination)
+      
+      gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime) // volume
+      
+      modulator.start()
+      osc1.start()
+      osc2.start()
+      
+      sirenRef.current = { audioCtx, osc1, osc2, modulator }
+    } catch (e) {
+      console.warn('Audio synthesis blocked or unsupported:', e)
+    }
+  }
+
+  const stopSiren = () => {
+    if (sirenRef.current) {
+      try {
+        sirenRef.current.osc1.stop()
+        sirenRef.current.osc2.stop()
+        sirenRef.current.modulator.stop()
+        sirenRef.current.audioCtx.close()
+      } catch (e) {
+        console.error(e)
+      }
+      sirenRef.current = null
+    }
+  }
+
+  const acknowledgeSos = () => {
+    if (activeSosAlert) {
+      const acknowledged = JSON.parse(localStorage.getItem('acknowledgedSos') || '[]')
+      const sosId = activeSosAlert.id || `SOS-${new Date(activeSosAlert.createdAt).getTime()}`
+      if (!acknowledged.includes(sosId)) {
+        acknowledged.push(sosId)
+        localStorage.setItem('acknowledgedSos', JSON.stringify(acknowledged))
+      }
+    }
+    stopSiren()
+    setActiveSosAlert(null)
+  }
 
   async function api(path, options = {}) {
     const response = await fetch(`${API_BASE}${path}`, {
@@ -137,6 +213,22 @@ function App() {
       setEvents(eventData)
       setActiveRide(rideData[0] || null)
       setNotice('Live API connected. Dashboard data refreshed.')
+
+      // Check for recent SOS alerts (within last 5 minutes)
+      if (isAdmin && eventData && eventData.length > 0) {
+        const sosEvents = eventData.filter(e => e.type === 'sos:raised')
+        if (sosEvents.length > 0) {
+          const latestSos = sosEvents[sosEvents.length - 1]
+          const sosTime = new Date(latestSos.createdAt).getTime()
+          const fiveMinutesAgo = Date.now() - 5 * 60 * 1000
+          
+          const acknowledgedSosIds = JSON.parse(localStorage.getItem('acknowledgedSos') || '[]')
+          if (sosTime > fiveMinutesAgo && !acknowledgedSosIds.includes(latestSos.id)) {
+            setActiveSosAlert(latestSos.payload)
+            playSiren()
+          }
+        }
+      }
     } catch (error) {
       setNotice(error.message)
     } finally {
@@ -170,6 +262,7 @@ function App() {
   }
 
   function logout() {
+    stopSiren()
     localStorage.removeItem('varasToken')
     localStorage.removeItem('varasUser')
     setToken('')
@@ -364,6 +457,8 @@ function App() {
           updateDriverStatus={updateDriverStatus}
           updateRideStatus={updateRideStatus}
           user={user}
+          activeSosAlert={activeSosAlert}
+          acknowledgeSos={acknowledgeSos}
         />
       </section>
     </main>

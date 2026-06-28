@@ -3,6 +3,7 @@ const { db, saveDb } = require('../connect/database')
 function getAnalytics() {
   const completed = db.rides.filter((ride) => ride.status === 'Completed')
   const revenue = completed.reduce((sum, ride) => sum + ride.fare, 0)
+  const platformCommission = Math.round(revenue * 0.15)
   const peakAreas = db.rides.reduce((areas, ride) => {
     areas[ride.pickup] = (areas[ride.pickup] || 0) + 1
     return areas
@@ -13,6 +14,7 @@ function getAnalytics() {
   return {
     ridesToday: db.rides.length,
     monthlyRevenue: revenue,
+    platformCommission: platformCommission,
     averageRating: completed.reduce((sum, ride) => sum + ride.rating, 0) / completed.length || 0,
     onlineDrivers: db.drivers.filter((driver) => driver.status === 'Online').length,
     pendingVerifications: db.drivers.filter((driver) => !driver.verified).length,
